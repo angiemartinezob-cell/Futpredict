@@ -1,7 +1,7 @@
 USE FutPredictDB;
 GO
 
-CREATE PROCEDURE sp_ActualizarResultadoPartido
+CREATE OR ALTER PROCEDURE sp_ActualizarResultadoPartido
     @partido_id INT,
     @goles_local INT,
     @goles_visitante INT
@@ -31,7 +31,11 @@ BEGIN
 END
 GO
 
+-- Prueba
 EXEC sp_ActualizarResultadoPartido @partido_id = 1, @goles_local = 3, @goles_visitante = 1;
+GO
 
 SELECT * FROM Partido WHERE partido_id = 1;
+GO
+
 

@@ -1,69 +1,52 @@
 USE FutPredictDB;
 GO
+SET XACT_ABORT ON;
+GO
 
-BEGIN TRANSACTION RegistrarPartidoCompleto;
+-- Partido nuevo, todavía "Programado" (Manchester City vs Liverpool)
+IF NOT EXISTS (SELECT 1 FROM Partido WHERE partido_id = 7)
+BEGIN
+    INSERT INTO Partido (partido_id, fecha, equipo_local_id, equipo_visitante_id, goles_local, goles_visitante, liga_id, temporada_id, estado)
+    VALUES (7, '2027-01-20', 3, 4, 0, 0, 2, 2, 'Programado');
+END
+GO
+
+-- Transacción: registrar un gol y pasar el partido a "En juego"
+BEGIN TRANSACTION RegistrarEventoPartido;
 
 BEGIN TRY
-    -- 1. Actualizar el resultado del partido
+    IF NOT EXISTS (
+        SELECT 1
+        FROM Partido p
+        JOIN JugadorEquipo je
+            ON je.jugador_id = 5
+           AND je.temporada_id = p.temporada_id
+           AND je.equipo_id = 3
+        WHERE p.partido_id = 7 AND 3 IN (p.equipo_local_id, p.equipo_visitante_id)
+    )
+    BEGIN
+        RAISERROR('El jugador no pertenece al equipo indicado en este partido.', 16, 1);
+    END
+
+    INSERT INTO EventoPartido (evento_id, partido_id, equipo_id, jugador_id, tipo_evento, minuto, descripcion)
+    VALUES (2, 7, 3, 5, 'Gol', 15, 'Gol de jugada tras contragolpe');
+
     UPDATE Partido
-    SET goles_local = 2,
-        goles_visitante = 2,
-        estado = 'Finalizado'
-    WHERE partido_id = 3;
+    SET estado = 'En juego'
+    WHERE partido_id = 7;
 
-    -- 2. Insertar estadística del jugador 9 en ese partido
-    INSERT INTO EstadisticaJugador (
-        estadistica_id, partido_id, jugador_id, minutos_jugados, goles, asistencias,
-        tiros, pases_completados, recuperaciones, tiros_arco, faltas_cometidas,
-        tarjetas_amarillas, tarjetas_rojas, calificacion
-    )
-    VALUES (22, 3, 9, 90, 1, 0, 3, 30, 4, 2, 1, 0, 0, 7.80);
-
-    -- 3. Insertar estadística del jugador 10 en ese partido
-    INSERT INTO EstadisticaJugador (
-        estadistica_id, partido_id, jugador_id, minutos_jugados, goles, asistencias,
-        tiros, pases_completados, recuperaciones, tiros_arco, faltas_cometidas,
-        tarjetas_amarillas, tarjetas_rojas, calificacion
-    )
-    VALUES (23, 3, 10, 90, 0, 1, 1, 28, 6, 0, 2, 0, 0, 7.20);
-
-    COMMIT TRANSACTION RegistrarPartidoCompleto;
-    PRINT 'Partido y estadísticas registrados correctamente (transacción completa).';
+    COMMIT TRANSACTION RegistrarEventoPartido;
+    PRINT 'Evento y estado del partido actualizados correctamente.';
 END TRY
 BEGIN CATCH
-    ROLLBACK TRANSACTION RegistrarPartidoCompleto;
-    PRINT 'Ocurrió un error, se revirtieron todos los cambios: ' + ERROR_MESSAGE();
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION RegistrarEventoPartido;
+    PRINT 'Error, se revirtieron los cambios: ' + ERROR_MESSAGE();
 END CATCH
 GO
 
-SELECT * FROM Partido WHERE partido_id = 3;
-
-BEGIN TRANSACTION RegistrarPartidoCompleto;
-
-BEGIN TRY
-    UPDATE Partido
-    SET goles_local = 2, goles_visitante = 2, estado = 'Finalizado'
-    WHERE partido_id = 3;
-
-    INSERT INTO EstadisticaJugador (
-        estadistica_id, partido_id, jugador_id, minutos_jugados, goles, asistencias,
-        tiros, pases_completados, recuperaciones, tiros_arco, faltas_cometidas,
-        tarjetas_amarillas, tarjetas_rojas, calificacion
-    )
-    VALUES (22, 3, 13, 90, 1, 0, 3, 30, 4, 2, 1, 0, 0, 7.80);
-
-    INSERT INTO EstadisticaJugador (
-        estadistica_id, partido_id, jugador_id, minutos_jugados, goles, asistencias,
-        tiros, pases_completados, recuperaciones, tiros_arco, faltas_cometidas,
-        tarjetas_amarillas, tarjetas_rojas, calificacion
-    )
-    VALUES (23, 3, 14, 90, 0, 1, 1, 28, 6, 0, 2, 0, 0, 7.20);
-
-    COMMIT TRANSACTION RegistrarPartidoCompleto;
-    PRINT 'Partido y estadísticas registrados correctamente (transacción completa).';
-END TRY
-BEGIN CATCH
-    ROLLBACK TRANSACTION RegistrarPartidoCompleto;
-    PRINT 'Ocurrió un error, se revirtieron todos los cambios: ' + ERROR_MESSAGE();
-END CATCH
+-- Verificación
+SELECT * FROM Partido WHERE partido_id = 7;
+SELECT * FROM EventoPartido WHERE partido_id = 7;
 GO
+
