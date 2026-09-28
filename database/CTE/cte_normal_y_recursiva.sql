@@ -54,13 +54,11 @@ FROM CTE_ClasificacionAporte
 ORDER BY participaciones_gol DESC, promedio_minutos DESC;
 GO
 
-
--- ============================================================================
 -- PARTE B: CTE RECURSIVA (Jerarquía Organigrama del Club)
 -- Objetivo: Recorrer la cadena de mando del cuerpo técnico y líderes del club 
 --           (Director Deportivo -> DT -> Asistentes -> Capitanes) generando el 
 --           nivel jerárquico y la ruta completa de mando.
--- ============================================================================
+
 
 -- Preparación: Creamos una estructura jerárquica en una tabla temporal para la demostración
 IF OBJECT_ID('tempdb..#OrganigramaClub') IS NOT NULL 
@@ -75,17 +73,19 @@ CREATE TABLE #OrganigramaClub (
 
 -- Inserción de datos con estructura de árbol (padres e hijos)
 INSERT INTO #OrganigramaClub (empleado_id, nombre, cargo, jefe_id) VALUES 
-(1, 'Carlos Bianchi', 'Director Deportivo', NULL),       -- Nivel 1 (Líder Supremo)
-(2, 'Lionel Scaloni', 'Director Técnico', 1),            -- Nivel 2 (Depende de Carlos Bianchi)
-(3, 'Pablo Aimar', 'Asistente Técnico Principal', 2),    -- Nivel 3 (Depende de Scaloni)
-(4, 'Walter Samuel', 'Analista Táctico', 2),             -- Nivel 3 (Depende de Scaloni)
-(5, 'Lionel Messi', 'Capitán de Campo', 3),              -- Nivel 4 (Depende de Aimar)
-(6, 'Angel Di Maria', 'Sub-Capitán', 3);                 -- Nivel 4 (Depende de Aimar)
+(1, 'Carlos Bianchi', 'Director Deportivo', NULL),       
+(2, 'Lionel Scaloni', 'Director Técnico', 1),            
+(3, 'Pablo Aimar', 'Asistente Técnico Principal', 2),    
+(4, 'Walter Samuel', 'Analista Táctico', 2),             
+(5, 'Lionel Messi', 'Capitán de Campo', 3),              
+(6, 'Angel Di Maria', 'Sub-Capitán', 3);                 
 
 
 -- CONSULTA CON CTE RECURSIVA
 WITH CTE_JerarquiaClub AS (
-    -- 1. CASO ANCLA (Base): Selecciona el nodo raíz (quien no tiene jefe, jefe_id IS NULL)
+
+    -- 1. CASO ANCLA:
+    -- Selecciona el nodo raíz, es decir, quien no tiene jefe
     SELECT 
         empleado_id,
         nombre,
@@ -98,21 +98,27 @@ WITH CTE_JerarquiaClub AS (
 
     UNION ALL
 
-    -- 2. PASO RECURSIVO: Se une a sí misma buscando los subordinados (hijos)
+    -- 2. PASO RECURSIVO:
+    -- Busca los subordinados de cada integrante encontrado
     SELECT 
         sub.empleado_id,
         sub.nombre,
         sub.cargo,
         sub.jefe_id,
         padre.nivel + 1 AS nivel,
-        CAST(padre.ruta_de_mando + ' -> ' + sub.nombre AS VARCHAR(500)) AS ruta_de_mando
+        CAST(
+            padre.ruta_de_mando + ' -> ' + sub.nombre 
+            AS VARCHAR(500)
+        ) AS ruta_de_mando
     FROM #OrganigramaClub sub
-    INNER JOIN CTE_JerarquiaClub padre ON sub.jefe_id = padre.empleado_id
+    INNER JOIN CTE_JerarquiaClub padre 
+        ON sub.jefe_id = padre.empleado_id
 )
--- 3. Consulta final ordenada por nivel de jerarquía
+
+-- 3. Consulta final
 SELECT 
     nivel,
-    REPLICATE('', nivel - 1) + nombre AS organigrama_visual,
+    REPLICATE('   ', nivel - 1) + nombre AS organigrama_visual,
     cargo,
     ruta_de_mando
 FROM CTE_JerarquiaClub
