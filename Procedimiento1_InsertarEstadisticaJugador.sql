@@ -1,3 +1,4 @@
+--Procedimiento1_InsertarEstadisticaJugador.sql
 USE FutPredictDB;
 GO
 
@@ -58,20 +59,41 @@ BEGIN
 END
 GO
 
--- Prueba válida: el jugador 2 es del Barcelona y juega el partido 6
+-- Prueba válida:
+-- El jugador 5 pertenece al Manchester City y participa en el partido 7
 EXEC sp_InsertarEstadisticaJugador
-    @estadistica_id = 31, @partido_id = 6, @jugador_id = 2,
-    @minutos_jugados = 90, @goles = 0, @asistencias = 1,
-    @tiros = 2, @pases_completados = 45, @recuperaciones = 6,
-    @tiros_arco = 1, @faltas_cometidas = 0, @tarjetas_amarillas = 0,
-    @tarjetas_rojas = 0, @calificacion = 7.80;
+    @estadistica_id = 31,
+    @partido_id = 7,
+    @jugador_id = 5,
+    @minutos_jugados = 90,
+    @goles = 1,
+    @asistencias = 0,
+    @tiros = 3,
+    @pases_completados = 45,
+    @recuperaciones = 6,
+    @tiros_arco = 2,
+    @faltas_cometidas = 1,
+    @tarjetas_amarillas = 0,
+    @tarjetas_rojas = 0,
+    @calificacion = 8.20;
 GO
 
+-- Prueba inválida:
+-- El jugador 5 es del Manchester City, pero el partido 1 es Barcelona vs Real Madrid
 EXEC sp_InsertarEstadisticaJugador
-    @estadistica_id = 30, @partido_id = 1, @jugador_id = 5,
-    @minutos_jugados = 90, @goles = 1, @asistencias = 0,
-    @tiros = 3, @pases_completados = 30, @recuperaciones = 5,
-    @tiros_arco = 2, @faltas_cometidas = 1, @tarjetas_amarillas = 0,
-    @tarjetas_rojas = 0, @calificacion = 7.50;
-
+    @estadistica_id = 30,
+    @partido_id = 1,
+    @jugador_id = 5,
+    @minutos_jugados = 90,
+    @goles = 1,
+    @asistencias = 0,
+    @tiros = 3,
+    @pases_completados = 30,
+    @recuperaciones = 5,
+    @tiros_arco = 2,
+    @faltas_cometidas = 1,
+    @tarjetas_amarillas = 0,
+    @tarjetas_rojas = 0,
+    @calificacion = 7.50;
+GO
 
