@@ -1,18 +1,25 @@
 USE FutPredictDB;
 GO
 
-
 -- PRUEBA 5: Actualizar el estado de un partido
--- Objetivo: Probar el trigger trg_Auditoria_Partido
--- Resultado esperado: Se debe generar un registro UPDATE en Auditoria con tabla_afectada = 'Partido'
+-- Objetivo: probar el trigger trg_Auditoria_Partido
+-- Resultado esperado: generar un registro UPDATE en Auditoria
 
+-- Estado actual del partido
+SELECT *
+FROM Partido
+WHERE partido_id = 7;
+GO
 
--- 1. Modificar estado o marcador de un partido
-UPDATE Partido 
-SET estado = 'En juego', goles_local = 1, goles_visitante = 0 
-WHERE partido_id = 1;
+-- Actualizar el partido de "En juego" a "Finalizado"
+UPDATE Partido
+SET estado = 'Finalizado'
+WHERE partido_id = 7;
+GO
 
--- 2. Verificar que el trigger guardó el log en Auditoria
-SELECT * FROM Auditoria 
-WHERE tabla_afectada = 'Partido' 
+-- Verificar que el trigger registró el cambio
+SELECT * FROM Auditoria
+WHERE tabla_afectada = 'Partido'
+  AND registro_id = 7
 ORDER BY auditoria_id DESC;
+GO
