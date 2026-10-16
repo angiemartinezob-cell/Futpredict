@@ -1,0 +1,14 @@
+# Dependencias
+node_modules/
+
+# Archivos generados
+dist/
+build/
+
+# Configuración privada
+.env
+.env.*
+!.env.example
+
+# Archivos temporales
+*.log

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="FutPredict">
+<defs><clipPath id="left"><rect x="4" y="5" width="57" height="110"/></clipPath></defs>
+<g clip-path="url(#left)" stroke="#07372c" stroke-width="3.2" stroke-linejoin="round">
+<circle cx="59" cy="60" r="48" fill="#58dca7"/>
+<path d="M45 34 62 22 79 35 73 56 52 62 37 50Z" fill="#0e5944"/>
+<path d="M37 50 19 43 11 62 26 80 52 62ZM52 62 73 56 83 77 64 95 41 84 26 80Z" fill="#43c892"/>
+<path d="M41 84 33 107M26 80 13 87M45 34 37 16" fill="none"/>
+</g>
+<path d="M61 9v102" stroke="#e7f4ed" stroke-width="5" stroke-linecap="round"/>
+<g fill="none" stroke="#e7f4ed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+<path d="M61 28h18l13-15"/><path d="M61 46h27l9-11"/><path d="M61 61h42"/><path d="M61 77h25l11 13"/><path d="M61 95h17l14 13"/>
+</g>
+<g fill="#0d3029" stroke="#e7f4ed" stroke-width="4">
+<circle cx="94" cy="12" r="6"/><circle cx="99" cy="33" r="6"/><circle cx="108" cy="61" r="6"/><circle cx="99" cy="92" r="6"/><circle cx="94" cy="108" r="6"/>
+</g>
+</svg>
