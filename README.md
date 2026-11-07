@@ -113,7 +113,7 @@ mediante un proceso ETL en Python. El diseño y las decisiones están documentad
   trayectoria de clubes dentro de cada jugador; competiciones dentro de cada equipo.
 - **Referencing:** cada estadística de jugador guarda `jugador_id`, que se resuelve con `$lookup`.
 - **Migración validada:** conteos de filas frente a documentos y totales de goles en ambos motores.
-- **Consultas avanzadas:** `find` con operadores, Aggregation Framework (`$match`, `$unwind`,
+- **Consultas avanzadas:** `find` con operadores y `$elemMatch`, Aggregation Framework (`$match`, `$map`, `$unwind`,
   `$group`, `$project`, `$addFields`, `$sort`), `$lookup` simple, con pipeline y sobre arreglos.
 - **Optimización y reglas:** índices revisados con `explain()` y validación con `$jsonSchema`.
 - **Integración con la aplicación:** la sección *Análisis* consulta MongoDB a través de la API.

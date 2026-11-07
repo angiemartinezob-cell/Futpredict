@@ -185,3 +185,111 @@ db.partidos.aggregate([
               goles: { $sum: { $add: ['$local.goles', '$visitante.goles'] } } } },
   { $project: { _id: 0 } }
 ]).forEach(printjson);
+
+// =====================================================================
+// CONSULTAS 11 A 14: los ejercicios del taller del 26 de octubre
+// aplicados a los datos de FutPredict.
+// =====================================================================
+
+// ---------------------------------------------------------------------
+// 11. $elemMatch: partidos en los que EL MISMO jugador marcó y asistió.
+//     Con dos condiciones separadas, MongoDB acepta el partido si un
+//     jugador marcó y OTRO distinto dio una asistencia (resultado de más).
+//     $elemMatch exige que ambas condiciones se cumplan en el mismo elemento.
+// ---------------------------------------------------------------------
+titulo('11. $elemMatch: el mismo jugador marcó y asistió');
+const conElemMatch = db.partidos.find(
+  { estadisticas_jugadores: { $elemMatch: { goles: { $gte: 1 }, asistencias: { $gte: 1 } } } },
+  { _id: 1 }
+).toArray().map((p) => p._id);
+
+const condicionesSeparadas = db.partidos.find(
+  { 'estadisticas_jugadores.goles': { $gte: 1 }, 'estadisticas_jugadores.asistencias': { $gte: 1 } },
+  { _id: 1 }
+).toArray().map((p) => p._id);
+
+printjson({ con_elemMatch: conElemMatch, condiciones_separadas: condicionesSeparadas });
+print('Los partidos que solo aparecen con condiciones separadas tienen el gol y la asistencia en jugadores distintos.');
+
+// ---------------------------------------------------------------------
+// 12. $addFields con $map: control de calidad de los datos.
+//     $map extrae los goles de cada jugador, $sum los suma y se comparan
+//     con el marcador del partido. Si no coinciden, falta una estadística.
+// ---------------------------------------------------------------------
+titulo('12. $addFields con $map: goles de jugadores frente al marcador');
+db.partidos.aggregate([
+  { $addFields: {
+      goles_jugadores: {
+        $sum: { $map: { input: '$estadisticas_jugadores', as: 'e', in: '$$e.goles' } }
+      },
+      goles_marcador: { $add: ['$local.goles', '$visitante.goles'] }
+  } },
+  { $project: {
+      _id: 1,
+      partido: { $concat: ['$local.nombre', ' vs ', '$visitante.nombre'] },
+      goles_marcador: 1,
+      goles_jugadores: 1,
+      revision: {
+        $cond: [{ $eq: ['$goles_marcador', '$goles_jugadores'] },
+                'Coincide', 'Revisar: faltan estadísticas']
+      }
+  } },
+  { $sort: { _id: 1 } }
+]).forEach(printjson);
+
+// ---------------------------------------------------------------------
+// 13. $lookup de uno a muchos: cuántos partidos tiene cada liga.
+//     Las ligas sin partidos (Champions League) aparecen con 0 gracias a
+//     que $lookup devuelve un arreglo vacío y $size lo cuenta como 0.
+// ---------------------------------------------------------------------
+titulo('13. $lookup uno a muchos: partidos por liga (incluye las que tienen 0)');
+db.ligas.aggregate([
+  { $lookup: {
+      from: 'partidos',
+      localField: '_id',
+      foreignField: 'liga.liga_id',
+      as: 'partidos'
+  } },
+  { $project: { _id: 0, liga: '$nombre', tipo: 1, partidos: { $size: '$partidos' } } },
+  { $sort: { partidos: -1, liga: 1 } }
+]).forEach(printjson);
+
+// ---------------------------------------------------------------------
+// 14. Tres colecciones: goles y asistencias por posición.
+//     partidos ($unwind de las estadísticas) -> jugadores (posición)
+//     -> equipos (nombre). Al final se comprueba que la suma por posición
+//     coincide con el total de goles de los jugadores.
+// ---------------------------------------------------------------------
+titulo('14. Tres colecciones: aporte por posición');
+const porPosicion = db.partidos.aggregate([
+  { $unwind: '$estadisticas_jugadores' },
+  { $lookup: { from: 'jugadores', localField: 'estadisticas_jugadores.jugador_id',
+               foreignField: '_id', as: 'jugador' } },
+  { $unwind: '$jugador' },
+  { $lookup: { from: 'equipos', localField: 'estadisticas_jugadores.equipo_id',
+               foreignField: '_id', as: 'equipo' } },
+  { $unwind: { path: '$equipo', preserveNullAndEmptyArrays: true } },
+  { $group: {
+      _id: '$jugador.posicion',
+      goles: { $sum: '$estadisticas_jugadores.goles' },
+      asistencias: { $sum: '$estadisticas_jugadores.asistencias' },
+      calificacion_promedio: { $avg: '$estadisticas_jugadores.calificacion' },
+      equipos: { $addToSet: '$equipo.nombre' }
+  } },
+  { $project: {
+      _id: 0, posicion: '$_id', goles: 1, asistencias: 1,
+      calificacion_promedio: { $round: ['$calificacion_promedio', 2] },
+      equipos: { $size: '$equipos' }
+  } },
+  { $sort: { goles: -1 } }
+]).toArray();
+porPosicion.forEach((fila) => printjson(fila));
+
+const sumaPorPosicion = porPosicion.reduce((total, fila) => total + fila.goles, 0);
+const totalGoles = db.partidos.aggregate([
+  { $unwind: '$estadisticas_jugadores' },
+  { $group: { _id: null, n: { $sum: '$estadisticas_jugadores.goles' } } }
+]).toArray()[0].n;
+print('Comprobación: suma por posición = ' + sumaPorPosicion +
+      ' | total de goles de jugadores = ' + totalGoles +
+      (sumaPorPosicion === totalGoles ? '  -> Coincide' : '  -> No coincide'));

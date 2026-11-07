@@ -53,7 +53,7 @@ como copia orientada a la lectura y al análisis, que es donde su modelo documen
 | Archivo | Propósito |
 |---|---|
 | `migracion_sql_a_mongo.py` | ETL: extrae las 10 tablas, las transforma en documentos, las carga y valida conteos y totales |
-| `consultas_futpredict.js` | 10 consultas de demostración: `find`, agregación, `$lookup` (simple, con pipeline y sobre arreglos), índices con `explain()` y validación `$jsonSchema` |
+| `consultas_futpredict.js` | 14 consultas de demostración: `find`, `$elemMatch`, agregación (`$map`, `$group`, `$unwind`), `$lookup` (simple, con pipeline, uno a muchos y entre tres colecciones), índices con `explain()` y validación `$jsonSchema` |
 | `crud_futpredict.js` | Operaciones CRUD completas: `insertOne`, `find`, `updateOne` (`$set`, `$push`, `$inc`, `$pull`), `updateMany` con `arrayFilters` y `deleteOne` |
 | `requirements.txt` | Librerías de Python (`pymongo`, `mssql-python`) |
 
