@@ -4,9 +4,9 @@
 
 | Participante | Usuario de GitHub | Rol / responsabilidad actual |
 |---|---|---|
-| Angie Sofia Martínez Obando | `angiemartinezob` | Modelamiento de la base de datos, consultas multitabla (JOINs), vistas y funciones |
+| Angie Sofia Martínez Obando | `angiemartinezob-cell` | Modelamiento de la base de datos, consultas multitabla (JOINs), vistas y funciones |
 | Julissa Fernanda Murillo Zapata | `Jullsm038` | Procedimientos almacenados y transacciones |
-| Obed Arango Ricardo | `obedarangori` | Triggers, CTE/recursividad y control de concurrencia|
+| Obed Arango Ricardo | `obedarangori-art` | Triggers, CTE/recursividad y control de concurrencia|
 
 
 ## Descripción y alcance del problema
@@ -42,6 +42,7 @@ Actualmente, el modelo relacional de FutPredictDB está compuesto por las siguie
 - EstadisticaJugador
 - EstadisticaEquipo
 - EventoPartido
+- Auditoria (registro de cambios generado por los triggers)
 
 
 ## Reglas de negocio
@@ -95,6 +96,78 @@ Actualmente se cuenta con:
 
 El proyecto podrá ajustarse y ampliarse a medida que avancen las siguientes unidades del curso.
 
+Los scripts deben ejecutarse en el orden indicado en [`database/ORDEN_EJECUCION.md`](database/ORDEN_EJECUCION.md).
+
+
+## Avance actual - Unidad 2 (NoSQL y MongoDB)
+
+La información de `FutPredictDB` se migró a una base documental `futpredict` en MongoDB
+mediante un proceso ETL en Python. El diseño y las decisiones están documentados en
+[`database/mongodb/README.md`](database/mongodb/README.md).
+
+- **Modelado documental:** colecciones `partidos`, `jugadores`, `equipos`, `ligas` y `temporadas`.
+- **Embedding:** estadísticas de equipo, estadísticas de jugadores y eventos dentro de cada partido;
+  trayectoria de clubes dentro de cada jugador; competiciones dentro de cada equipo.
+- **Referencing:** cada estadística de jugador guarda `jugador_id`, que se resuelve con `$lookup`.
+- **Migración validada:** conteos de filas frente a documentos y totales de goles en ambos motores.
+- **Consultas avanzadas:** `find` con operadores, Aggregation Framework (`$match`, `$unwind`,
+  `$group`, `$project`, `$addFields`, `$sort`), `$lookup` simple, con pipeline y sobre arreglos.
+- **Optimización y reglas:** índices revisados con `explain()` y validación con `$jsonSchema`.
+- **Integración con la aplicación:** la sección *Análisis* consulta MongoDB a través de la API.
+
+
+## Arquitectura de la aplicación
+
+```text
+SQL Server (FutPredictDB) ──► API Node.js/Express ──► React (Vite)
+        │                          ▲
+        └── ETL Python ──► MongoDB (futpredict)
+```
+
+| Ruta de la API | Fuente | Objeto de base de datos utilizado |
+|---|---|---|
+| `GET /api/resumen` | SQL Server | Subconsultas de conteo |
+| `GET /api/equipos` | SQL Server | Tabla `Equipo` |
+| `GET /api/jugadores` | SQL Server | CTE + `JugadorEquipo` + `fn_PromedioCalificacionJugador` + `fn_TotalContribucionesJugador` |
+| `GET /api/jugadores/:id/rendimiento` | SQL Server | `sp_ObtenerRendimientoJugador` + `fn_HistorialJugador` |
+| `GET /api/partidos` | SQL Server | Vista `vw_PartidosDetallados` |
+| `GET /api/ligas` | SQL Server | Subconsultas correlacionadas sobre `Liga` |
+| `GET /api/estadisticas/equipos` | SQL Server | Vista `vw_RendimientoEquipos` |
+| `GET /api/mongo/goleadores` | MongoDB | `$unwind` + `$group` + `$lookup` |
+| `GET /api/mongo/ligas` | MongoDB | `$group` + `$project` |
+
+
+## Cómo ejecutar el proyecto
+
+**Requisitos:** SQL Server (Developer o Express), SSMS, ODBC Driver 18 for SQL Server,
+Node.js, y para la Unidad 2: MongoDB Community Server, MongoDB Compass y Python 3.
+
+1. **Base de datos:** ejecutar los scripts según [`database/ORDEN_EJECUCION.md`](database/ORDEN_EJECUCION.md).
+2. **Backend:**
+   ```bash
+   cd futpredict-frontend/backend
+   copy .env.example .env        # en Windows; ajustar DB_SERVER si se usa SQLEXPRESS
+   npm install
+   npm install mongodb           # solo para las rutas de la Unidad 2
+   npm run probar-conexion       # debe mostrar: Equipos registrados: 10
+   npm start                     # http://localhost:3001/api
+   ```
+3. **Frontend** (en otra terminal):
+   ```bash
+   cd futpredict-frontend
+   npm install
+   npm run dev
+   ```
+4. **MongoDB (Unidad 2):** ver [`database/mongodb/README.md`](database/mongodb/README.md).
+
+
+## Flujo de trabajo en Git
+
+- `main` está protegida: los cambios entran solo mediante *pull request* aprobado por otro integrante.
+- Cada integrante trabaja en su rama (`angie`, `julissa`, `Obed`) y abre un *pull request* hacia `main`.
+- Commits pequeños y descriptivos, de uno a dos por integrante cada semana.
+
+
 ## Uso de IA
 
 Durante el desarrollo de FutPredict utilizaremos herramientas de inteligencia artificial como apoyo para resolver dudas, entender algunos conceptos, buscar ideas y revisar código o documentación.
@@ -104,3 +177,13 @@ También podremos apoyarnos en la IA para algunas partes del análisis de datos 
 Antes de utilizar cualquier resultado generado mediante inteligencia artificial, este será revisado y validado por los integrantes del equipo para comprobar que tenga sentido dentro del proyecto.
 
 La IA será una herramienta de apoyo, pero el desarrollo, las decisiones de diseño y la validación del proyecto serán realizados y revisados por los integrantes del equipo.
+
+### Metodología de desarrollo con IA
+
+1. **Contexto primero:** antes de pedir código se comparte el estado real del proyecto
+   (scripts SQL, estructura de tablas, archivos existentes).
+2. **Cambios pequeños:** la IA propone un cambio a la vez, indicando el archivo y la sección
+   exacta que se modifica, sin rehacer archivos completos.
+3. **Verificación humana:** cada consulta se ejecuta en SSMS o MongoDB Compass y cada ruta de
+   la API se prueba en el navegador antes de hacer commit.
+4. **Trazabilidad:** los commits en los que participó un asistente de IA lo indican en el mensaje.
