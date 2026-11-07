@@ -105,7 +105,10 @@ La información de `FutPredictDB` se migró a una base documental `futpredict` e
 mediante un proceso ETL en Python. El diseño y las decisiones están documentados en
 [`database/mongodb/README.md`](database/mongodb/README.md).
 
+- **Fundamentos:** qué es NoSQL y comparación con SQL Server aplicada a FutPredict.
 - **Modelado documental:** colecciones `partidos`, `jugadores`, `equipos`, `ligas` y `temporadas`.
+- **Operaciones CRUD:** `insertOne`, `find`, `updateOne` (`$set`, `$push`, `$inc`, `$pull`),
+  `updateMany` con `arrayFilters` y `deleteOne`.
 - **Embedding:** estadísticas de equipo, estadísticas de jugadores y eventos dentro de cada partido;
   trayectoria de clubes dentro de cada jugador; competiciones dentro de cada equipo.
 - **Referencing:** cada estadística de jugador guarda `jugador_id`, que se resuelve con `$lookup`.

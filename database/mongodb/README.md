@@ -4,12 +4,57 @@ Migración de la base relacional `FutPredictDB` (SQL Server) a la base documenta
 `futpredict` (MongoDB), siguiendo el mismo proceso del taller del 26 de octubre
 (VentasDB → ventas), pero aplicado a los datos del proyecto.
 
+## NoSQL y diferencias con SQL en FutPredict
+
+### ¿Qué es NoSQL?
+
+NoSQL (*Not only SQL*) agrupa los motores que no guardan la información en tablas
+relacionadas con un esquema fijo. Los cuatro tipos principales son:
+
+| Tipo | Cómo guarda los datos | Ejemplo |
+|---|---|---|
+| Documental | Documentos JSON/BSON con campos, arreglos y subdocumentos | **MongoDB** |
+| Clave-valor | Una clave y su valor | Redis |
+| Columnar | Familias de columnas distribuidas | Cassandra |
+| Grafos | Nodos y relaciones | Neo4j |
+
+### ¿Por qué MongoDB para FutPredict?
+
+Un partido es, por naturaleza, un **objeto con partes**: dos equipos con su marcador y sus
+estadísticas, una lista de jugadores con su rendimiento y una lista de eventos por minuto.
+En SQL Server esa información queda repartida en 7 tablas; en MongoDB cabe en un documento
+que se lee completo, que es exactamente lo que necesita la pantalla de un partido.
+
+Además, las estadísticas que se registran pueden cambiar con el tiempo (por ejemplo,
+agregar *xG* o kilómetros recorridos): en MongoDB se agrega el campo a los partidos nuevos
+sin modificar la estructura de los anteriores, mientras que en SQL Server habría que hacer
+`ALTER TABLE`.
+
+### SQL Server frente a MongoDB con ejemplos del proyecto
+
+| Aspecto | SQL Server (Unidad 1) | MongoDB (Unidad 2) |
+|---|---|---|
+| Estructura | 10 tablas normalizadas | 5 colecciones; partidos con datos incrustados |
+| Esquema | Fijo: `CREATE TABLE` | Flexible, controlado con `$jsonSchema` |
+| Leer un partido completo | `vw_PartidosDetallados` + JOIN con estadísticas y eventos (7 tablas) | `db.partidos.findOne({ _id: 1 })` |
+| Relacionar datos | `JOIN` | Incrustar, o `$lookup` cuando se referencia |
+| Integridad | Claves foráneas y `CHECK` (por ejemplo, `CK_Partido_Estado`) | Validador `$jsonSchema` y reglas de la aplicación; no hay claves foráneas |
+| Registrar un gol | Transacción: `INSERT` en `EventoPartido` + `UPDATE` en `Partido` (`Transaccion2`) | Un solo `updateOne` con `$push` + `$inc`, atómico por documento |
+| Cambiar el nombre de un equipo | Un `UPDATE` en `Equipo` | `updateMany` en equipos, partidos y trayectorias (dato duplicado) |
+| Reportes | Vistas, funciones y procedimientos | Aggregation Framework (`$group`, `$unwind`, `$lookup`) |
+| Escalamiento | Vertical (servidor más potente) | Horizontal (*sharding*) cuando el volumen lo exige |
+
+**Conclusión:** SQL Server sigue siendo la fuente principal, porque garantiza la integridad
+(un jugador solo tiene estadísticas en partidos de su equipo, sin duplicados). MongoDB se usa
+como copia orientada a la lectura y al análisis, que es donde su modelo documental rinde más.
+
 ## 1. Archivos
 
 | Archivo | Propósito |
 |---|---|
 | `migracion_sql_a_mongo.py` | ETL: extrae las 10 tablas, las transforma en documentos, las carga y valida conteos y totales |
 | `consultas_futpredict.js` | 10 consultas de demostración: `find`, agregación, `$lookup` (simple, con pipeline y sobre arreglos), índices con `explain()` y validación `$jsonSchema` |
+| `crud_futpredict.js` | Operaciones CRUD completas: `insertOne`, `find`, `updateOne` (`$set`, `$push`, `$inc`, `$pull`), `updateMany` con `arrayFilters` y `deleteOne` |
 | `requirements.txt` | Librerías de Python (`pymongo`, `mssql-python`) |
 
 ## 2. Cómo ejecutarlo
@@ -20,9 +65,13 @@ Migración de la base relacional `FutPredictDB` (SQL Server) a la base documenta
 pip install -r requirements.txt
 python migracion_sql_a_mongo.py
 
-# 3. Consultas de demostración
+# 3. Consultas de demostración y operaciones CRUD
 mongosh futpredict consultas_futpredict.js
+mongosh futpredict crud_futpredict.js
 ```
+
+`mongosh` es el MongoDB Shell (se instala con `winget install MongoDB.Shell`). La consola
+integrada de Compass no admite `load()`, pero se pueden pegar allí los bloques uno por uno.
 
 Con SQL Server Express, antes de ejecutar el script:
 `set DB_SERVER=localhost\SQLEXPRESS` (CMD) o `$env:DB_SERVER="localhost\SQLEXPRESS"` (PowerShell).
