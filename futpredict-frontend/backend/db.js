@@ -1,14 +1,6 @@
-const sql = require('mssql/msnodesqlv8');
-
-const config = {
-  connectionString:
-    'Driver={ODBC Driver 18 for SQL Server};' +
-    'Server=localhost;' +
-    'Database=FutPredictDB;' +
-    'Trusted_Connection=Yes;' +
-    'Encrypt=Yes;' +
-    'TrustServerCertificate=Yes;'
-};
+// Prueba de conexión: node db.js
+// La configuración ahora se toma de conexion.js (y del archivo .env).
+const { sql, dbConfig: config } = require('./conexion');
 
 async function probarConexion() {
   try {
