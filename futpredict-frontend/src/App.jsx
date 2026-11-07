@@ -29,75 +29,128 @@ import {
 import futpredictMark from './assets/futpredict-mark.svg';
 import './LoginPremium.css';
 
-// DATOS DEMOSTRATIVOS
-const players = [
-  {
-    name: 'Jugador Barcelona 1',
-    position: 'Delantero',
-    team: 'FC Barcelona',
-    goals: 8,
-    assists: 4,
-    rating: 9.2,
-    initials: 'JB',
-  },
-  {
-    name: 'Jugador Madrid 1',
-    position: 'Mediocampista',
-    team: 'Real Madrid',
-    goals: 5,
-    assists: 6,
-    rating: 8.8,
-    initials: 'JM',
-  },
-  {
-    name: 'Jugador City 1',
-    position: 'Delantero',
-    team: 'Manchester City',
-    goals: 7,
-    assists: 3,
-    rating: 8.6,
-    initials: 'JC',
-  },
-];
+// CONEXIÓN CON LA API (SQL Server y MongoDB)
+// Se puede cambiar con la variable VITE_API_URL en un archivo .env del frontend.
+const API_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const matches = [
-  {
-    home: 'FC Barcelona',
-    away: 'Real Madrid',
-    homeScore: 2,
-    awayScore: 1,
-    date: '10 sep 2026',
-    status: 'Finalizado',
-    initials: ['FC', 'RM'],
-  },
-  {
-    home: 'Manchester City',
-    away: 'Liverpool',
-    homeScore: 3,
-    awayScore: 2,
-    date: '12 sep 2026',
-    status: 'Finalizado',
-    initials: ['MC', 'LI'],
-  },
-  {
-    home: 'Inter de Milan',
-    away: 'Juventus',
-    homeScore: 1,
-    awayScore: 1,
-    date: '14 sep 2026',
-    status: 'Finalizado',
-    initials: ['IN', 'JU'],
-  },
-  {
-    home: 'Bayern Munich',
-    away: 'Borussia Dortmund',
-    homeScore: 2,
-    awayScore: 0,
-    date: '16 sep 2026',
-    status: 'Finalizado',
-    initials: ['BM', 'BD'],
-  },
-];
+// Consulta una ruta de la API y devuelve { datos, cargando, error }.
+function useApi(ruta, valorInicial = []) {
+  const [datos, setDatos] = useState(valorInicial);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let activo = true;
+
+    async function cargar() {
+      try {
+        const respuesta = await fetch(`${API_URL}${ruta}`);
+
+        if (!respuesta.ok) {
+          throw new Error(`No se pudo consultar ${ruta}`);
+        }
+
+        const resultado = await respuesta.json();
+        if (activo) setDatos(resultado);
+      } catch (err) {
+        if (activo) setError(err.message);
+      } finally {
+        if (activo) setCargando(false);
+      }
+    }
+
+    cargar();
+
+    return () => {
+      activo = false;
+    };
+  }, [ruta]);
+
+  return { datos, cargando, error };
+}
+
+// Iniciales para los escudos y avatares: "Inter de Milan" -> "IM"
+function obtenerIniciales(nombre = '') {
+  return nombre
+    .split(' ')
+    .filter(
+      (palabra) =>
+        palabra &&
+        !['de', 'del', 'la', 'el'].includes(palabra.toLowerCase())
+    )
+    .slice(0, 2)
+    .map((palabra) => palabra[0])
+    .join('')
+    .toUpperCase();
+}
+
+// '2026-09-10' -> '10 sep 2026' (sin conversiones de zona horaria)
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function formatearFecha(fecha = '') {
+  const [anio, mes, dia] = fecha.slice(0, 10).split('-');
+  if (!anio || !mes || !dia) return fecha;
+  return `${Number(dia)} ${MESES[Number(mes) - 1]} ${anio}`;
+}
+
+function formatearCalificacion(valor) {
+  return valor === null || valor === undefined
+    ? '—'
+    : Number(valor).toFixed(1);
+}
+
+// Adapta las filas de la API al formato que ya usaban las tarjetas
+function adaptarJugador(jugador) {
+  return {
+    id: jugador.jugador_id,
+    name: jugador.nombre,
+    position: jugador.posicion,
+    team: jugador.equipo || 'Sin equipo',
+    goals: jugador.goles,
+    assists: jugador.asistencias,
+    rating: jugador.calificacion_promedio,
+    initials: obtenerIniciales(jugador.nombre),
+  };
+}
+
+function adaptarPartido(partido) {
+  return {
+    id: partido.partido_id,
+    home: partido.equipo_local,
+    away: partido.equipo_visitante,
+    homeScore: partido.goles_local,
+    awayScore: partido.goles_visitante,
+    date: formatearFecha(partido.fecha),
+    status: partido.estado,
+    league: partido.liga,
+    initials: [
+      obtenerIniciales(partido.equipo_local),
+      obtenerIniciales(partido.equipo_visitante),
+    ],
+  };
+}
+
+// Mensajes de carga / error / vacío con el mismo estilo de la sección Equipos
+function EstadoCarga({ cargando, error, vacio, que }) {
+  if (cargando) {
+    return <p className="empty-state">Cargando {que} desde FutPredict...</p>;
+  }
+
+  if (error) {
+    return (
+      <p className="empty-state" role="alert" style={{ color: '#b91c1c' }}>
+        No se pudieron cargar los {que}. Verifica que el servidor esté funcionando.
+      </p>
+    );
+  }
+
+  if (vacio) {
+    return <p className="empty-state">Todavía no hay {que} en la base de datos.</p>;
+  }
+
+  return null;
+}
 
 const menuItems = [
   { label: 'Dashboard', icon: Home },
@@ -407,7 +460,7 @@ const [errorEquipos, setErrorEquipos] = useState('');
 useEffect(() => {
   async function cargarEquipos() {
     try {
-      const respuesta = await fetch('http://localhost:3001/api/equipos');
+      const respuesta = await fetch(`${API_URL}/api/equipos`);
 
       if (!respuesta.ok) {
         throw new Error('No se pudieron cargar los equipos');
@@ -424,6 +477,31 @@ useEffect(() => {
 
   cargarEquipos();
 }, []);
+
+  // Datos de SQL Server
+  const resumen = useApi('/api/resumen', null);
+  const jugadoresApi = useApi('/api/jugadores');
+  const partidosApi = useApi('/api/partidos');
+  const ligasApi = useApi('/api/ligas');
+  const tablaEquiposApi = useApi('/api/estadisticas/equipos');
+
+  // Datos de MongoDB (Unidad 2)
+  const goleadoresMongo = useApi('/api/mongo/goleadores');
+  const ligasMongo = useApi('/api/mongo/ligas');
+
+  const players = jugadoresApi.datos.map(adaptarJugador);
+  const matches = partidosApi.datos.map(adaptarPartido);
+  const recentMatches = matches.slice(0, 4);
+
+  // Jugadores destacados: mejor calificación promedio (fn_PromedioCalificacionJugador)
+  const featuredPlayers = [...players]
+    .filter((player) => player.rating !== null && player.rating !== undefined)
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 3);
+
+  // Valor de un contador del dashboard según el estado de /api/resumen
+  const contador = (campo) =>
+    resumen.cargando ? '...' : resumen.error || !resumen.datos ? '—' : resumen.datos[campo];
 
   const filteredPlayers = players.filter((player) =>
     `${player.name} ${player.team} ${player.position}`
@@ -613,7 +691,7 @@ useEffect(() => {
               <section className="stats-grid">
                 <StatCard
                   title="Jugadores"
-                  value="20"
+                  value={contador('jugadores')}
                   note="Registrados en la base de datos"
                   icon={Users}
                 />
@@ -627,14 +705,14 @@ useEffect(() => {
 
                 <StatCard
                   title="Partidos"
-                  value="5"
+                  value={contador('partidos')}
                   note="Encuentros registrados"
                   icon={Trophy}
                 />
 
                 <StatCard
                   title="Ligas"
-                  value="6"
+                  value={contador('ligas')}
                   note="Competiciones registradas"
                   icon={BarChart3}
                 />
@@ -661,11 +739,18 @@ useEffect(() => {
                     </button>
                   </div>
 
+                  <EstadoCarga
+                    cargando={partidosApi.cargando}
+                    error={partidosApi.error}
+                    vacio={matches.length === 0}
+                    que="partidos"
+                  />
+
                   <div className="matches-list">
-                    {matches.map((match) => (
+                    {recentMatches.map((match) => (
                       <div
                         className="match-row"
-                        key={`${match.home}-${match.away}`}
+                        key={match.id}
                       >
                         <div className="match-date">
                           {match.date}
@@ -705,8 +790,8 @@ useEffect(() => {
 
                   <div className="panel-footer">
                     <ClipboardList size={16} />
-                    Datos de ejemplo basados en los
-                    registros del proyecto
+                    Datos consultados en SQL Server
+                    (vista vw_PartidosDetallados)
                   </div>
                 </article>
 
@@ -715,7 +800,7 @@ useEffect(() => {
                     <div>
                       <h2>Jugadores destacados</h2>
                       <p>
-                        Ejemplo de rendimiento individual
+                        Mejor calificación promedio
                       </p>
                     </div>
 
@@ -730,11 +815,18 @@ useEffect(() => {
                     </button>
                   </div>
 
+                  <EstadoCarga
+                    cargando={jugadoresApi.cargando}
+                    error={jugadoresApi.error}
+                    vacio={featuredPlayers.length === 0}
+                    que="jugadores"
+                  />
+
                   <div className="leaders-list">
-                    {players.map((player, index) => (
+                    {featuredPlayers.map((player, index) => (
                       <div
                         className="leader-row"
-                        key={player.name}
+                        key={player.id}
                       >
                         <div
                           className={`player-avatar player-color-${index}`}
@@ -753,7 +845,7 @@ useEffect(() => {
 
                         <div className="rating">
                           <Trophy size={13} />
-                          {player.rating.toFixed(1)}
+                          {formatearCalificacion(player.rating)}
                         </div>
                       </div>
                     ))}
@@ -807,17 +899,24 @@ useEffect(() => {
                   <h2>Directorio de jugadores</h2>
 
                   <p>
-                    {filteredPlayers.length} jugadores
-                    en esta vista de demostración
+                    {filteredPlayers.length} de {players.length} jugadores
+                    registrados en la base de datos
                   </p>
                 </div>
               </div>
+
+              <EstadoCarga
+                cargando={jugadoresApi.cargando}
+                error={jugadoresApi.error}
+                vacio={false}
+                que="jugadores"
+              />
 
               <div className="player-grid">
                 {filteredPlayers.map((player, index) => (
                   <article
                     className="player-card"
-                    key={player.name}
+                    key={player.id}
                   >
                     <div
                       className={`player-cover cover-${index % 3}`}
@@ -828,7 +927,7 @@ useEffect(() => {
 
                       <span className="rating-badge">
                         <Trophy size={13} />
-                        {player.rating.toFixed(1)}
+                        {formatearCalificacion(player.rating)}
                       </span>
                     </div>
 
@@ -857,7 +956,7 @@ useEffect(() => {
 
                         <div>
                           <strong>
-                            {player.rating.toFixed(1)}
+                            {formatearCalificacion(player.rating)}
                           </strong>
                           <span>Calificación</span>
                         </div>
@@ -866,7 +965,9 @@ useEffect(() => {
                   </article>
                 ))}
 
-                {filteredPlayers.length === 0 && (
+                {!jugadoresApi.cargando &&
+                  !jugadoresApi.error &&
+                  filteredPlayers.length === 0 && (
                   <p className="empty-state">
                     No se encontraron jugadores
                     con esa búsqueda.
@@ -875,9 +976,8 @@ useEffect(() => {
               </div>
 
               <p className="demo-disclaimer">
-                Esta vista usa datos ilustrativos.
-                Próximo paso: consultar todos los
-                jugadores desde la API.
+                Equipo actual según JugadorEquipo; calificación
+                promedio calculada con fn_PromedioCalificacionJugador.
               </p>
             </section>
           )}
@@ -958,17 +1058,24 @@ useEffect(() => {
                 <div>
                   <h2>Resultados de partidos</h2>
                   <p>
-                    Encuentros de ejemplo registrados
+                    {matches.length} encuentros registrados
                     en la base de datos.
                   </p>
                 </div>
               </div>
 
+              <EstadoCarga
+                cargando={partidosApi.cargando}
+                error={partidosApi.error}
+                vacio={matches.length === 0}
+                que="partidos"
+              />
+
               <div className="matches-list full-matches">
                 {matches.map((match) => (
                   <div
                     className="match-row"
-                    key={`${match.home}-${match.away}`}
+                    key={match.id}
                   >
                     <div className="match-date">
                       {match.date}
@@ -1073,6 +1180,215 @@ useEffect(() => {
                 <span className="coming-soon">
                   Próximamente
                 </span>
+              </article>
+            </section>
+          )}
+
+          {/* ESTADÍSTICAS: datos de SQL Server */}
+          {activePage === 'Estadísticas' && (
+            <section className="data-sections">
+              <article className="panel directory-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Rendimiento por equipo</h2>
+                    <p>
+                      Calculado en SQL Server a partir de la vista
+                      vw_RendimientoEquipos.
+                    </p>
+                  </div>
+                </div>
+
+                <EstadoCarga
+                  cargando={tablaEquiposApi.cargando}
+                  error={tablaEquiposApi.error}
+                  vacio={tablaEquiposApi.datos.length === 0}
+                  que="estadísticas de equipos"
+                />
+
+                {tablaEquiposApi.datos.length > 0 && (
+                  <div className="table-wrapper">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Equipo</th>
+                          <th>PJ</th>
+                          <th>G</th>
+                          <th>E</th>
+                          <th>P</th>
+                          <th>GF</th>
+                          <th>GC</th>
+                          <th>Posesión</th>
+                          <th>Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tablaEquiposApi.datos.map((fila) => (
+                          <tr key={fila.equipo}>
+                            <td>{fila.equipo}</td>
+                            <td>{fila.partidos}</td>
+                            <td>{fila.ganados}</td>
+                            <td>{fila.empatados}</td>
+                            <td>{fila.perdidos}</td>
+                            <td>{fila.goles_favor}</td>
+                            <td>{fila.goles_contra}</td>
+                            <td>
+                              {fila.posesion_promedio === null
+                                ? '—'
+                                : `${Number(fila.posesion_promedio).toFixed(1)}%`}
+                            </td>
+                            <td><strong>{fila.puntos}</strong></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </article>
+
+              <article className="panel directory-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Ligas registradas</h2>
+                    <p>
+                      Competiciones con su cantidad de equipos y partidos.
+                    </p>
+                  </div>
+                </div>
+
+                <EstadoCarga
+                  cargando={ligasApi.cargando}
+                  error={ligasApi.error}
+                  vacio={ligasApi.datos.length === 0}
+                  que="ligas"
+                />
+
+                {ligasApi.datos.length > 0 && (
+                  <div className="table-wrapper">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Liga</th>
+                          <th>País</th>
+                          <th>Tipo</th>
+                          <th>Equipos</th>
+                          <th>Partidos</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ligasApi.datos.map((liga) => (
+                          <tr key={liga.liga_id}>
+                            <td>{liga.nombre}</td>
+                            <td>{liga.pais}</td>
+                            <td>{liga.tipo}</td>
+                            <td>{liga.equipos}</td>
+                            <td>{liga.partidos}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </article>
+            </section>
+          )}
+
+          {/* ANÁLISIS: datos de MongoDB (Unidad 2) */}
+          {activePage === 'Análisis' && (
+            <section className="data-sections">
+              <article className="panel directory-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Jugadores con más aportes de gol</h2>
+                    <p>
+                      Aggregation Framework de MongoDB:
+                      $unwind, $group y $lookup.
+                    </p>
+                  </div>
+                </div>
+
+                {goleadoresMongo.cargando && (
+                  <p className="empty-state">Consultando MongoDB...</p>
+                )}
+
+                {goleadoresMongo.error && (
+                  <p className="empty-state">
+                    MongoDB no está disponible. Ejecuta la migración
+                    (database/mongodb) e instala el paquete mongodb en el backend.
+                  </p>
+                )}
+
+                {goleadoresMongo.datos.length > 0 && (
+                  <div className="table-wrapper">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Jugador</th>
+                          <th>Equipo</th>
+                          <th>Goles</th>
+                          <th>Asist.</th>
+                          <th>G+A</th>
+                          <th>Calif.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {goleadoresMongo.datos.map((fila) => (
+                          <tr key={fila.jugador_id}>
+                            <td>{fila.nombre}</td>
+                            <td>{fila.equipo || '—'}</td>
+                            <td>{fila.goles}</td>
+                            <td>{fila.asistencias}</td>
+                            <td><strong>{fila.contribuciones}</strong></td>
+                            <td>{formatearCalificacion(fila.calificacion)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </article>
+
+              <article className="panel directory-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>Promedios por liga</h2>
+                    <p>Goles y tiros por partido calculados en MongoDB.</p>
+                  </div>
+                </div>
+
+                {ligasMongo.cargando && (
+                  <p className="empty-state">Consultando MongoDB...</p>
+                )}
+
+                {ligasMongo.error && (
+                  <p className="empty-state">MongoDB no está disponible.</p>
+                )}
+
+                {ligasMongo.datos.length > 0 && (
+                  <div className="table-wrapper">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Liga</th>
+                          <th>Partidos</th>
+                          <th>Goles</th>
+                          <th>Goles/partido</th>
+                          <th>Tiros/partido</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ligasMongo.datos.map((fila) => (
+                          <tr key={fila.liga}>
+                            <td>{fila.liga}</td>
+                            <td>{fila.partidos}</td>
+                            <td>{fila.goles}</td>
+                            <td><strong>{fila.goles_por_partido}</strong></td>
+                            <td>{fila.tiros_por_partido}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </article>
             </section>
           )}

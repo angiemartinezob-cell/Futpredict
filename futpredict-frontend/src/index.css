@@ -248,3 +248,16 @@ h1, h2, h3, .stat-value { font-family: 'Manrope', sans-serif; }
   .player-cover { height: 150px; }
   .page-footer { flex-direction: column; line-height: 1.5; }
 }
+
+/* Tablas con datos de SQL Server y MongoDB (Estadísticas y Análisis) */
+.data-sections { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 15px; margin-top: 15px; }
+.table-wrapper { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.data-table th { text-align: left; color: #8a958e; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 0 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table td { padding: 11px 8px; border-bottom: 1px solid #f0f3f0; color: #304236; white-space: nowrap; }
+.data-table td:first-child { font-weight: 700; }
+.data-table tbody tr:hover { background: #f7faf8; }
+.data-table strong { color: var(--green); }
+@media (max-width: 1250px) {
+  .data-sections { grid-template-columns: 1fr; }
+}
