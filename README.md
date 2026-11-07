@@ -15,7 +15,7 @@ En el fútbol se genera una gran cantidad de información durante los partidos y
 
 FutPredict busca reunir y organizar esta información para facilitar su consulta y análisis. El proyecto tendrá en cuenta datos relacionados con jugadores, equipos, partidos, temporadas y estadísticas de rendimiento. Con esta información se podrán generar indicadores, hacer comparaciones y analizar cómo ha evolucionado el rendimiento de los jugadores y los equipos.
 
-Como parte del alcance del proyecto, también se integrarán diferentes formas de almacenamiento y análisis de datos trabajadas durante el curso, incluyendo una base de datos relacional, una base de datos NoSQL y una estructura orientada al análisis de información. A partir de los datos históricos se podrá estudiar posteriormente la incorporación de modelos predictivos para estimar el rendimiento de los jugadores en próximos partidos.
+Como parte del alcance del proyecto, también se integrarán diferentes formas de almacenamiento y análisis de datos trabajadas durante el curso, incluyendo una base de datos relacional (SQL Server) y una base de datos NoSQL (MongoDB). A partir de los datos históricos se podrá estudiar posteriormente la incorporación de modelos predictivos para estimar el rendimiento de los jugadores en próximos partidos.
 
 La información obtenida estará orientada a apoyar a entrenadores y analistas en el seguimiento y comparación de jugadores y en la toma de decisiones deportivas. Las posibles predicciones funcionarían como apoyo para el análisis y no buscarían reemplazar la decisión de los profesionales.
 
@@ -70,7 +70,7 @@ Consideramos que FutPredict es un proyecto complejo porque no se enfoca solament
 
 Durante la primera unidad se trabaja con SQL Server para administrar la información principal mediante un modelo relacional compuesto por diferentes entidades relacionadas entre sí. Sobre esta estructura se implementan consultas multitabla, vistas, funciones, procedimientos almacenados, transacciones, triggers y otros mecanismos propios de SQL Server.
 
-En las siguientes unidades del curso se podrá ampliar el proyecto utilizando MongoDB y herramientas orientadas al análisis de datos, además de conceptos como Data Warehouse, Data Mart y Data Lake.
+En la segunda unidad el proyecto se amplió con MongoDB: la información se migró a un modelo documental y se consulta con el Aggregation Framework desde la misma aplicación.
 
 A medida que exista suficiente información histórica también se podrá estudiar la incorporación de modelos predictivos orientados al rendimiento deportivo.
 
